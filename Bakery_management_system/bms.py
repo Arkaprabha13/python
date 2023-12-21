@@ -10,31 +10,52 @@ def is_valid_name(name, min_length=2, max_length=20, allowed_characters=r"^[a-zA
         name (str): The name to check.
         min_length (int, optional): Minimum allowed length for the name. Defaults to 2.
         max_length (int, optional): Maximum allowed length for the name. Defaults to 30.
-        allowed_characters (str, optional): A regular expression pattern defining valid characters. 
+        allowed_characters (str, optional): A regular expression pattern defining valid characters.
             Defaults to letters, spaces, apostrophes, and hyphens.
 
     Returns:
         bool: True if the name is valid, False otherwise.
     """
-
     if not name:
         return False  # Empty names are invalid
 
     if not re.match(allowed_characters, name):
         return False  # Name contains invalid characters
 
-    if len(name) < min_length or len(name) > max_length:
+    if not min_length <= len(name) <= max_length:
         return False  # Name length is outside the allowed range
 
     # Additional validation rules you can add here...
 
     return True
 
+
+def is_valid_phone(phone):
+    phone_pattern = re.compile(r"^\d{10}$")  # Assuming a 10-digit phone number
+    return bool(re.match(phone_pattern, phone))
+
+def search_order_by_id(orders, order_id):
+    for order in orders:
+        if order.order_id == order_id:
+            print(f"Order ID: {order.order_id}")
+            print(f"Customer Name: {order.customer_name}")
+            print(f"Customer Phone: {order.customer_phone}")
+            print(f"Order Date: {order.order_date}")
+            print(f"Cake Type: {order.cake_type}")
+            print(f"Cake Amount: {order.cake_amount}")
+            return
+
+    print("Order not found.")
+
+
+    
+
 # Structure to represent an order
 class Order:
-    def __init__(self, order_id, customer_name, order_date, cake_type, cake_amount):
+    def __init__(self, order_id, customer_name, customer_phone, order_date, cake_type, cake_amount):
         self.order_id = order_id
         self.customer_name = customer_name
+        self.customer_phone = customer_phone
         self.order_date = order_date
         self.cake_type = cake_type
         self.cake_amount = cake_amount
@@ -56,21 +77,30 @@ def get_cake_choice():
 
     while True:
         choice = input("Enter the number corresponding to your cake choice: ")
-
         if choice.isdigit() and 1 <= int(choice) <= 10:
             return int(choice)
         else:
             print("Invalid choice. Please enter a valid number.")
 
-# Function to add a new order
+
+def get_customer_phone():
+    while True:
+        phone = input("Enter customer phone number (10 digits): ")
+        if is_valid_phone(phone):
+            return phone
+        else:
+            print("Invalid phone number. Please enter a 10-digit number.")
+
+
 def add_order(orders):
     customer_name = input("Enter customer name: ")
-    if(is_valid_name(customer_name)==False):
-        print("cant procced name is not valid")
-        return 
+    if not is_valid_name(customer_name):
+        print("Can't proceed, the name is not valid.")
+        return
+
+    customer_phone = get_customer_phone()
+
     order_date = datetime.utcnow().strftime("%Y-%m-%d")
-    
-    # Get the cake choice from the menu
     cake_choice = get_cake_choice()
     cake_types = ["Chocolate Fudge Cake", "Red Velvet Cake", "Carrot Cake", "Vanilla Bean Cheesecake",
                   "Banana Bread Cake", "Lemon Pound Cake", "Angel Food Cake", "Coffee Cake",
@@ -79,18 +109,13 @@ def add_order(orders):
 
     cake_amount = int(input("Enter cake amount: "))
 
-    # Generate a unique order ID (simple example, not necessarily globally unique)
     order_id = len(orders) + 1
+    new_order = Order(order_id, customer_name, customer_phone, order_date, cake_type, cake_amount)
 
-    new_order = Order(order_id, customer_name, order_date, cake_type, cake_amount)
-
-    # Add the new order to the list
     orders.append(new_order)
-
     print(f"Order added successfully. Order ID: {new_order.order_id}")
-
-    # Update Excel file
     update_excel_file(orders)
+
 
 # Function to update Excel file with order details
 def update_excel_file(orders):
@@ -98,16 +123,18 @@ def update_excel_file(orders):
     worksheet = workbook.active
 
     # Write headers to the Excel file
-    worksheet.append(["Order ID", "Customer Name", "Order Date", "Cake Type", "Cake Amount"])
+    worksheet.append(["Order ID", "Customer Name", "Customer Phone", "Order Date", "Cake Type", "Cake Amount"])
 
     # Write order details to the Excel file
     for order in orders:
-        worksheet.append([order.order_id, order.customer_name, order.order_date, order.cake_type, order.cake_amount])
+        worksheet.append([order.order_id, order.customer_name, order.customer_phone,
+                          order.order_date, order.cake_type, order.cake_amount])
 
     # Save the Excel file
     workbook.save("bakery_orders.xlsx")
 
     print("Excel file updated successfully.")
+
 
 # Function to load existing orders from Excel file (if any)
 def load_orders_from_excel():
@@ -118,13 +145,17 @@ def load_orders_from_excel():
         worksheet = workbook.active
 
         for row in worksheet.iter_rows(min_row=2, values_only=True):
-            order = Order(*row)
-            orders.append(order)
+            if len(row) == 6:  # Make sure there are six values in the row
+                order = Order(row[0], row[1], row[2], row[3], row[4], row[5])
+                orders.append(order)
+            else:
+                print("Skipping invalid row in the Excel file.")
 
     except FileNotFoundError:
         pass
 
     return orders
+
 
 # Main function
 def main():
@@ -144,8 +175,12 @@ def main():
         elif choice == "4":
             print("Exiting the Bakery Management System. Goodbye!")
             break
+        elif choice=='2':
+            search_order_by_id(orders,int(input("Enter the order id : ")))
+
         else:
             print("Invalid choice. Please enter a valid option.")
+
 
 if __name__ == "__main__":
     main()
