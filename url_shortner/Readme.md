@@ -1,4 +1,5 @@
-Running the URL Shortener:/n
+Running the URL Shortener:
+
 Save the url_shortener.py script and the templates folder in the same directory.
 
 Open a terminal and navigate to the directory.
